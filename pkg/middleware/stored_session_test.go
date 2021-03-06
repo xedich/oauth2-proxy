@@ -109,10 +109,10 @@ var _ = Describe("Stored Session Suite", func() {
 				rw := httptest.NewRecorder()
 
 				opts := &StoredSessionLoaderOptions{
-					SessionStore:           in.store,
-					RefreshPeriod:          in.refreshPeriod,
-					RefreshSessionIfNeeded: in.refreshSession,
-					ValidateSessionState:   in.validateSession,
+					SessionStore:    in.store,
+					RefreshPeriod:   in.refreshPeriod,
+					RefreshSession:  in.refreshSession,
+					ValidateSession: in.validateSession,
 				}
 
 				// Create the handler with a next handler that will capture the session
@@ -261,7 +261,7 @@ var _ = Describe("Stored Session Suite", func() {
 				s := &storedSessionLoader{
 					refreshPeriod: in.refreshPeriod,
 					store:         &fakeSessionStore{},
-					refreshSessionWithProviderIfNeeded: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						refreshed = true
 						switch ss.RefreshToken {
 						case refresh:
@@ -272,7 +272,7 @@ var _ = Describe("Stored Session Suite", func() {
 							return false, errors.New("error refreshing session")
 						}
 					},
-					validateSessionState: func(_ context.Context, ss *sessionsapi.SessionState) bool {
+					sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
 						validated = true
 						return ss.AccessToken != "Invalid"
 					},
@@ -364,7 +364,7 @@ var _ = Describe("Stored Session Suite", func() {
 		)
 	})
 
-	Context("refreshSessionWithProvider", func() {
+	Context("refreshSession", func() {
 		type refreshSessionWithProviderTableInput struct {
 			session         *sessionsapi.SessionState
 			expectedErr     error
@@ -388,7 +388,7 @@ var _ = Describe("Stored Session Suite", func() {
 							return nil
 						},
 					},
-					refreshSessionWithProviderIfNeeded: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
+					sessionRefresher: func(_ context.Context, ss *sessionsapi.SessionState) (bool, error) {
 						switch ss.RefreshToken {
 						case refresh:
 							return true, nil
@@ -401,7 +401,7 @@ var _ = Describe("Stored Session Suite", func() {
 				}
 
 				req := httptest.NewRequest("", "/", nil)
-				refreshed, err := s.refreshSessionWithProvider(nil, req, in.session)
+				refreshed, err := s.refreshSession(nil, req, in.session)
 				if in.expectedErr != nil {
 					Expect(err).To(MatchError(in.expectedErr))
 				} else {
@@ -453,7 +453,7 @@ var _ = Describe("Stored Session Suite", func() {
 
 		BeforeEach(func() {
 			s = &storedSessionLoader{
-				validateSessionState: func(_ context.Context, ss *sessionsapi.SessionState) bool {
+				sessionValidator: func(_ context.Context, ss *sessionsapi.SessionState) bool {
 					return ss.AccessToken == "Valid"
 				},
 			}
