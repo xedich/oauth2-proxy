@@ -259,14 +259,16 @@ func (p *GitLabProvider) createSession(ctx context.Context, token *oauth2.Token)
 		}
 	}
 
-	created := time.Now()
-	return &sessions.SessionState{
+	ss := &sessions.SessionState{
 		AccessToken:  token.AccessToken,
 		IDToken:      getIDToken(token),
 		RefreshToken: token.RefreshToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &idToken.Expiry,
-	}, nil
+	}
+
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(idToken.Expiry)
+
+	return ss, nil
 }
 
 // ValidateSession checks that the session's IDToken is still valid
@@ -300,7 +302,7 @@ func (p *GitLabProvider) EnrichSession(ctx context.Context, s *sessions.SessionS
 }
 
 // addGroupsToSession projects into session.Groups
-func (p *GitLabProvider) addGroupsToSession(ctx context.Context, s *sessions.SessionState) {
+func (p *GitLabProvider) addGroupsToSession(_ context.Context, s *sessions.SessionState) {
 	// Iterate over projects, check if oauth2-proxy can get project information on behalf of the user
 	for _, group := range p.Groups {
 		s.Groups = append(s.Groups, fmt.Sprintf("group:%s", group))

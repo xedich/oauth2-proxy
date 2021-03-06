@@ -146,22 +146,21 @@ func (p *AzureProvider) Redeem(ctx context.Context, redirectURL, code string) (*
 		return nil, err
 	}
 
-	created := time.Now()
-	expires := time.Unix(jsonResponse.ExpiresOn, 0)
-
-	return &sessions.SessionState{
+	s := &sessions.SessionState{
 		AccessToken:  jsonResponse.AccessToken,
 		IDToken:      jsonResponse.IDToken,
-		CreatedAt:    &created,
-		ExpiresOn:    &expires,
 		RefreshToken: jsonResponse.RefreshToken,
-	}, nil
+	}
+
+	s.CreatedAtNow()
+	s.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
+
+	return s, nil
 }
 
-// RefreshSessionIfNeeded checks if the session has expired and uses the
-// RefreshToken to fetch a new ID token if required
-func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.SessionState) (bool, error) {
-	if s == nil || s.ExpiresOn.After(time.Now()) || s.RefreshToken == "" {
+// RefreshSession uses the RefreshToken to fetch new Access and ID Tokens
+func (p *AzureProvider) RefreshSession(ctx context.Context, s *sessions.SessionState) (bool, error) {
+	if s == nil || s.RefreshToken == "" {
 		return false, nil
 	}
 
@@ -176,7 +175,7 @@ func (p *AzureProvider) RefreshSessionIfNeeded(ctx context.Context, s *sessions.
 	return true, nil
 }
 
-func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) (err error) {
+func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.SessionState) error {
 	params := url.Values{}
 	params.Add("client_id", p.ClientID)
 	params.Add("client_secret", p.ClientSecret)
@@ -190,7 +189,7 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		IDToken      string `json:"id_token"`
 	}
 
-	err = requests.New(p.RedeemURL.String()).
+	err := requests.New(p.RedeemURL.String()).
 		WithContext(ctx).
 		WithMethod("POST").
 		WithBody(bytes.NewBufferString(params.Encode())).
@@ -199,17 +198,17 @@ func (p *AzureProvider) redeemRefreshToken(ctx context.Context, s *sessions.Sess
 		UnmarshalInto(&jsonResponse)
 
 	if err != nil {
-		return
+		return err
 	}
 
-	now := time.Now()
-	expires := time.Unix(jsonResponse.ExpiresOn, 0)
 	s.AccessToken = jsonResponse.AccessToken
 	s.IDToken = jsonResponse.IDToken
 	s.RefreshToken = jsonResponse.RefreshToken
-	s.CreatedAt = &now
-	s.ExpiresOn = &expires
-	return
+
+	s.CreatedAtNow()
+	s.SetExpiresOn(time.Unix(jsonResponse.ExpiresOn, 0))
+
+	return nil
 }
 
 func makeAzureHeader(accessToken string) http.Header {

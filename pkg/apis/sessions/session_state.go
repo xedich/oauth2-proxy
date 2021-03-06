@@ -15,6 +15,9 @@ import (
 	"github.com/vmihailenco/msgpack/v4"
 )
 
+// NowFunc is used by `CreatedAtNow` when initializing a session
+var NowFunc = time.Now
+
 // SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
 	CreatedAt *time.Time `msgpack:"ca,omitempty"`
@@ -30,9 +33,30 @@ type SessionState struct {
 	PreferredUsername string   `msgpack:"pu,omitempty"`
 }
 
+// CreatedAtNow sets a SessionState's CreatedAt to now
+func (s *SessionState) CreatedAtNow() {
+	now := NowFunc()
+	s.CreatedAt = &now
+}
+
+// SetExpiresOn sets an expiration
+func (s *SessionState) SetExpiresOn(exp time.Time) {
+	s.ExpiresOn = &exp
+}
+
+// ExpiresIn sets an expiration a certain duration from CreatedAt.
+// CreatedAt will be set to time.Now if it is unset.
+func (s *SessionState) ExpiresIn(d time.Duration) {
+	if s.CreatedAt == nil {
+		s.CreatedAtNow()
+	}
+	exp := s.CreatedAt.Add(d)
+	s.ExpiresOn = &exp
+}
+
 // IsExpired checks whether the session has expired
 func (s *SessionState) IsExpired() bool {
-	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(time.Now()) {
+	if s.ExpiresOn != nil && !s.ExpiresOn.IsZero() && s.ExpiresOn.Before(NowFunc()) {
 		return true
 	}
 	return false
@@ -41,7 +65,7 @@ func (s *SessionState) IsExpired() bool {
 // Age returns the age of a session
 func (s *SessionState) Age() time.Duration {
 	if s.CreatedAt != nil && !s.CreatedAt.IsZero() {
-		return time.Now().Truncate(time.Second).Sub(*s.CreatedAt)
+		return NowFunc().Truncate(time.Second).Sub(*s.CreatedAt)
 	}
 	return 0
 }

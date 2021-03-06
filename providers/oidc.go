@@ -196,7 +196,9 @@ func (p *OIDCProvider) CreateSessionFromToken(ctx context.Context, token string)
 	ss.AccessToken = token
 	ss.IDToken = token
 	ss.RefreshToken = ""
-	ss.ExpiresOn = &idToken.Expiry
+
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(idToken.Expiry)
 
 	return ss, nil
 }
@@ -226,9 +228,8 @@ func (p *OIDCProvider) createSession(ctx context.Context, token *oauth2.Token, r
 	ss.RefreshToken = token.RefreshToken
 	ss.IDToken = getIDToken(token)
 
-	created := time.Now()
-	ss.CreatedAt = &created
-	ss.ExpiresOn = &token.Expiry
+	ss.CreatedAtNow()
+	ss.SetExpiresOn(token.Expiry)
 
 	return ss, nil
 }
