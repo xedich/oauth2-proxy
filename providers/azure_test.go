@@ -239,17 +239,7 @@ func TestAzureProviderGetsTokensInRedeem(t *testing.T) {
 	assert.Equal(t, timestamp, session.ExpiresOn.UTC())
 }
 
-func TestAzureProviderNotRefreshWhenNotExpired(t *testing.T) {
-	p := testAzureProvider("")
-
-	expires := time.Now().Add(time.Duration(1) * time.Hour)
-	session := &sessions.SessionState{AccessToken: "some_access_token", RefreshToken: "some_refresh_token", IDToken: "some_id_token", ExpiresOn: &expires}
-	refreshNeeded, err := p.RefreshSession(context.Background(), session)
-	assert.Equal(t, nil, err)
-	assert.False(t, refreshNeeded)
-}
-
-func TestAzureProviderRefreshWhenExpired(t *testing.T) {
+func TestAzureProviderRefresh(t *testing.T) {
 	b := testAzureBackend(`{ "access_token": "new_some_access_token", "refresh_token": "new_some_refresh_token", "expires_on": "32693148245", "id_token": "new_some_id_token" }`)
 	defer b.Close()
 	timestamp, _ := time.Parse(time.RFC3339, "3006-01-02T22:04:05Z")

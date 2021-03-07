@@ -18,8 +18,12 @@ func TestRefresh(t *testing.T) {
 	refreshed, err := p.RefreshSession(context.Background(), &sessions.SessionState{
 		ExpiresOn: &expires,
 	})
-	assert.Equal(t, false, refreshed)
-	assert.Equal(t, nil, err)
+	assert.True(t, refreshed)
+	assert.NoError(t, err)
+
+	refreshed, err = p.RefreshSession(context.Background(), nil)
+	assert.False(t, refreshed)
+	assert.NoError(t, err)
 }
 
 func TestAcrValuesNotConfigured(t *testing.T) {
