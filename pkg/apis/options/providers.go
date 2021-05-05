@@ -128,6 +128,9 @@ const (
 
 	// OIDCProvider is the provider type for OIDC
 	OIDCProvider ProviderType = "oidc"
+
+	// WordpressProvider is the provider type for Wordpress
+	WordpressProvider ProviderType = "wordpress"
 )
 
 type KeycloakOptions struct {
